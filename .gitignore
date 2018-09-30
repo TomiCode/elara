@@ -1,0 +1,13 @@
+# Build objects
+*.o
+*.obj
+elara
+
+# Firmware binaries
+*.hex
+
+# Vim swap files (cos i'm such a morron)
+*.swp
+
+# macOS files
+.DS_Store
