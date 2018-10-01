@@ -1,7 +1,10 @@
+#include <stdio.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
 #include "serial.h"
+
+static FILE serial_out = FDEV_SETUP_STREAM(serial_putchar, NULL, _FDEV_SETUP_WRITE);
 
 // Initialize the UART registers.
 void serial_init(uint16_t ubrr)
@@ -12,20 +15,24 @@ void serial_init(uint16_t ubrr)
   UCSR0B = _BV(RXEN0) | _BV(TXEN0);
   // Frame format setup.
   UCSR0C = _BV(UCSZ01) | _BV(UCSZ00);
+  // Assign stdout as serial output.
+  stdout = &serial_out;
 }
 
 // Transmit one byte (frame).
-void serial_send(const uint8_t data)
+int serial_putchar(char data, FILE *stream)
 {
-  while(!(UCSR0A & _BV(UDRE0)));
+  (void)stream;
+  loop_until_bit_is_set(UCSR0A, UDRE0);
   UDR0 = data;
   // White until the data was send.
-  while(!(UCSR0A & _BV(TXC0)));
+  loop_until_bit_is_set(UCSR0A, TXC0);
+  return 0;
 }
 
 // Receive one frame.
-uint8_t serial_recv(void)
+char serial_getchar(void)
 {
-  while(!(UCSR0A & _BV(RXC0)));
+  loop_until_bit_is_set(UCSR0A, RXC0);
   return UDR0;
 }

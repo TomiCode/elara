@@ -22,6 +22,7 @@ all: $(TARGET).hex
 
 $(TARGET).hex: $(TARGET)
 	$(OBJCPY) -O ihex -R .eeprom $(TARGET) $@
+	avr-size --format=avr --mcu=$(MCU) $(TARGET)
 
 $(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) -mmcu=$(MCU) -DF_CPU=$(F_CPU)UL $(OBJ) -o $@

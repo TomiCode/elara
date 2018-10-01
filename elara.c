@@ -13,10 +13,8 @@ int main(void)
 {
   serial_init(BAUD_115200);
   sei(); 
-
-  while(1) {
-    serial_send('.');
-  }
+  
+  printf("Hello world!\n");
 
   return 0;
 }
