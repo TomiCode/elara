@@ -11,10 +11,23 @@
 
 int main(void)
 {
+  /* Wait a while for startup. */
+  _delay_ms(5);
+
+  /* Initialize our drivers. */
   serial_init(BAUD_115200);
+
+  /* Enable global interrupts. */
   sei(); 
   
-  printf("Hello world!\n");
+  printf("elara v0.01\r\n");
+  printf("Hello world :)\r\n");
 
   return 0;
+}
+
+/* Button interrupt handler. */
+ISR(INT0_vect)
+{
+
 }
