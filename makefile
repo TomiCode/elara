@@ -5,7 +5,7 @@ F_CPU = 16000000
 # Target project name
 TARGET = elara
 # All source and object files
-SRC = $(TARGET).c drv_acs724.c drv_nrf24.c
+SRC = $(TARGET).c drv/acs724.c drv/nrf24.c drv/serial.c
 OBJ = $(SRC:.c=.o)
 # What compier whe should use
 CC = avr-gcc
@@ -27,7 +27,7 @@ $(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) -mmcu=$(MCU) -DF_CPU=$(F_CPU)UL $(OBJ) -o $@
 
 .c.o:
-	$(CC) $(CFLAGS) -mmcu=$(MCU) -DF_CPU=$(F_CPU)UL $< -o $@
+	$(CC) $(CFLAGS) -mmcu=$(MCU) -DF_CPU=$(F_CPU)UL $< -o $@ -c
 
 upload:
 	avrdude -v -p$(MCU) -cstk500 -P$(USB_DEV) -b57600 -U flash:w:$(TARGET).hex:i

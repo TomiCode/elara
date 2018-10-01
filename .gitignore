@@ -3,6 +3,10 @@
 *.obj
 elara
 
+# Compiler debug files
+*.s
+*.i
+
 # Firmware binaries
 *.hex
 
