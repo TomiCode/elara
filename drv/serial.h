@@ -1,11 +1,15 @@
 #ifndef DRV_SERIAL_H
 #define DRV_SERIAL_H
 
+/* Serial communication parameters. */
+#define BAUD 9600
+#define BAUD_TOL 2
+
 #include <stdio.h>
+#include <util/setbaud.h>
 
-#define BAUD_115200   8
-
-void serial_init(uint16_t);
+/* Function prototypes. */
+void serial_init(void);
 int serial_putchar(char, FILE *stream);
 char serial_getchar(void);
 

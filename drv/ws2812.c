@@ -7,8 +7,8 @@ void ws2812_init(void)
 }
 
 /* Proably not this type. */
-void ws2812_set_color(uint8_t)
+void ws2812_set_color(uint8_t color)
 {
-
+  (void)color;
 }
 

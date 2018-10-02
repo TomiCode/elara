@@ -14,14 +14,14 @@ int main(void)
   /* Wait a while for startup. */
   _delay_ms(5);
 
-  /* Initialize our drivers. */
-  serial_init(BAUD_115200);
+  /* Initialize drivers. */
+  serial_init();
+  nrf24_init();
 
   /* Enable global interrupts. */
-  sei(); 
-  
-  printf("elara v0.01\r\n");
-  printf("Hello world :)\r\n");
+  sei();
+
+  printf("elara v0.01 boot\r\n");
 
   return 0;
 }

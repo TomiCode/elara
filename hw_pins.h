@@ -5,8 +5,8 @@
 #define PIN_ADC_SENSOR 0x06
 
 // IO Register C
-#define PIN_RF_SELECT 0
-#define PIN_RF_ENABLE 1
+#define PIN_RF_SEL    0
+#define PIN_RF_EN     1
 #define PIN_RELAY     2
 #define PIN_FRONT_LED 3
 #define PIN_RESET     6
