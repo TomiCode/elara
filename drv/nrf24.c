@@ -2,6 +2,7 @@
 #include <avr/interrupt.h>
 
 #include "nrf24.h"
+#include "nrf24_spec.h"
 #include "../hw_pins.h"
 
 /* Initialize the config register values. */
@@ -11,7 +12,7 @@ volatile struct radio_config config = {0};
 void nrf24_init(void)
 {
   /* Set SCK and MOSI as outputs. */
-  DDRB |= _BV(PB5) | _BV(PB3);
+  DDRB |= _BV(PIN_RF_SCK) | _BV(PIN_RF_MOSI);
   /* Set radio SS and Enable as outputs. */
   DDRC |= _BV(PIN_RF_SEL) | _BV(PIN_RF_EN);
   /* Enable SPI communication with 250 KHz clock. */
