@@ -1,9 +1,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-#include "nrf24.h"
-#include "nrf24_spec.h"
-#include "../hw_pins.h"
+#include "../spec/nrf24.h"
 
 /* Initialize the config register values. */
 volatile struct radio_config config = {0};

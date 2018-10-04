@@ -2,7 +2,7 @@
 #define NRF24_SPEC_H
 
 /* Hardware mapping. */
-#include "../hw_pins.h"
+#include "board.h"
 #define PIN_RF_MOSI 3
 #define PIN_RF_MISO 4
 #define PIN_RF_SCK 5
