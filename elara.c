@@ -21,6 +21,8 @@ int main(void)
   /* Enable global interrupts. */
   sei();
 
+  nrf24_setup(0x00);
+
   printf("elara v0.01 boot\r\n");
 
   return 0;

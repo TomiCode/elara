@@ -1,12 +1,12 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-#include "../hw_pins.h"
+#include "../spec/hardware.h"
 
 // Initialize the ADC registers.
 void acs724_init(void)
 {
-  ADMUX = _BV(REFS0) | PIN_ADC_SENSOR;
+  ADMUX = _BV(REFS0) | IO_ADC_SENSOR;
 }
 
 // Start the ADC conversion.

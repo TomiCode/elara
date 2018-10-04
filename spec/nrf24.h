@@ -2,10 +2,7 @@
 #define NRF24_SPEC_H
 
 /* Hardware mapping. */
-#include "board.h"
-#define PIN_RF_MOSI 3
-#define PIN_RF_MISO 4
-#define PIN_RF_SCK 5
+#include "hardware.h"
 
 /* SPI Commands. */
 #define R_REGISTER(reg) (0x00 | (reg & 0x1F))
