@@ -20,21 +20,50 @@ void nrf24_init(void)
   _delay_ms(11); // 10.3 ms power on reset time for nRF24L01
 }
 
-void nrf24_setup(uint32_t base_addr)
+/* Put data on the SPI interface and return received data. */
+uint8_t nrf24_spi_sb(uint8_t frame)
 {
-  (void)base_addr;
+  SPDR = frame;
+  loop_until_bit_is_set(SPSR, SPIF);
+  return SPDR;
+}
+
+/* Read data from radio. */
+uint8_t nrf24_spi_read(uint8_t command, uint8_t *buffer, uint8_t size)
+{
   uint8_t status;
-  uint8_t config;
 
   PORTC &= ~_BV(IO_RF_CSN);
-  SPDR = R_REGISTER(CONFIG);
-  loop_until_bit_is_set(SPSR, SPIF);
-  status = SPDR;
-  SPDR = 0x00;
-  loop_until_bit_is_set(SPSR, SPIF);
-  config = SPDR;
+  status = nrf24_spi_sb(command);
+
+  for(; size > 0; size--) {
+    *(buffer++) = nrf24_spi_sb(RF_NONE);
+  }
+  
   PORTC |= _BV(IO_RF_CSN);
-  printf("rf: %x, %x\r\n", status, config);
+  return status;
+}
+
+uint8_t nrf24_spi_write(uint8_t command, uint8_t *buffer, uint8_t size)
+{
+  uint8_t status;
+
+  PORTC &= ~_BV(IO_RF_CSN);
+  status = nrf24_spi_sb(command);
+
+  for(; size > 0; size--) {
+    nrf24_spi_sb(*(buffer++));
+  }
+
+  PORTC |= _BV(IO_RF_CSN);
+  return status;
+}
+
+void nrf24_setup(void)
+{
+  uint8_t config = 0;
+  printf("nRF: status: %02x, config: %02x.\r\n", 
+      nrf24_spi_read(R_REGISTER(CONFIG), &config, sizeof(uint8_t)), config);
 }
 
 /* Radio IRQ handler. */

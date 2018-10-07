@@ -5,6 +5,8 @@
 #include "hardware.h"
 
 /* SPI Commands. */
+#define RF_NONE 0x00
+#define RF_NOP 0xFF
 #define R_REGISTER(reg) (0x00 | (reg & 0x1F))
 #define W_REGISTER(reg) (0x20 | (reg & 0x1F))
 #define R_RX_PAYLOAD 0x61
@@ -16,7 +18,6 @@
 #define R_RX_PL_WID 0x60
 #define W_ACK_PAYLOAD(ppp) (0xA8 | (ppp & 0x07))
 #define W_TX_PAYLOAD_NOACK 0xB0
-#define NOP 0xFF
 
 /* Register map mnemonics. */
 #define CONFIG 0x00
