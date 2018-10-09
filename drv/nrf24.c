@@ -70,7 +70,7 @@ void nrf24_setup(void)
   printf("nRF status: %02x\r\n", nrf24_spi_write(W_REGISTER(CONFIG), &rf_config, sizeof(uint8_t)));
 }
 
-/* Radio IRQ handler. */
+/* Radio interrupt handler. */
 ISR(INT1_vect)
 {
 

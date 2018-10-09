@@ -13,7 +13,6 @@ void serial_init(void)
   /* Baudrate setup. */
   UBRR0H = UBRRH_VALUE;
   UBRR0L = UBRRL_VALUE;
-
   /* Enable USART and set frame format. */
   UCSR0B = _BV(RXEN0) | _BV(TXEN0);
   UCSR0C = _BV(UCSZ01) | _BV(UCSZ00);
