@@ -37,9 +37,9 @@ uint8_t nrf24_spi_read(uint8_t command, uint8_t *buffer, uint8_t size)
   status = nrf24_spi_sb(command);
 
   for(; size > 0; size--) {
-    *(buffer++) = nrf24_spi_sb(RF_NONE);
+    *(buffer++) = nrf24_spi_sb(0);
   }
-  
+
   PORTC |= _BV(IO_RF_CSN);
   return status;
 }
@@ -61,9 +61,13 @@ uint8_t nrf24_spi_write(uint8_t command, uint8_t *buffer, uint8_t size)
 
 void nrf24_setup(void)
 {
-  uint8_t config = 0;
-  printf("nRF: status: %02x, config: %02x.\r\n", 
-      nrf24_spi_read(R_REGISTER(CONFIG), &config, sizeof(uint8_t)), config);
+  uint8_t rf_config;
+  if (nrf24_spi_read(R_REGISTER(CONFIG), &rf_config, sizeof(uint8_t)) == 0x0e) {
+    printf("Error while nRF init.\r\n");
+  }
+
+  rf_config |= MASK_RX_DR | EN_CRC | PWR_UP;
+  printf("nRF status: %02x\r\n", nrf24_spi_write(W_REGISTER(CONFIG), &rf_config, sizeof(uint8_t)));
 }
 
 /* Radio IRQ handler. */
