@@ -62,7 +62,7 @@ uint8_t nrf24_spi_write(uint8_t command, uint8_t *buffer, uint8_t size)
 void nrf24_setup(void)
 {
   uint8_t rf_config;
-  if (nrf24_spi_read(R_REGISTER(CONFIG), &rf_config, sizeof(uint8_t)) == 0x0e) {
+  if (nrf24_spi_read(R_REGISTER(CONFIG), &rf_config, sizeof(uint8_t)) != 0x0e) {
     printf("Error while nRF init.\r\n");
   }
 

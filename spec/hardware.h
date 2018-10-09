@@ -19,9 +19,8 @@
 #define IO_RESET  6
 
 /* IO Register D */
-#define IO_SERIAL_RX 0
-#define IO_SERIAL_TX 1
 #define IO_FBTN      2
-#define IO_LEDSTAT   3
+#define IO_RF_IRQ    3
+#define IO_LEDSTAT   4
 
 #endif // HARDWARE_H

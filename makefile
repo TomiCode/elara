@@ -33,5 +33,8 @@ $(TARGET): $(OBJ)
 upload:
 	avrdude -v -p$(MCU) -cstk500 -P$(USB_DEV) -b57600 -U flash:w:$(TARGET).hex:i
 
+dump:
+	avr-objdump --disassemble-all --source $(TARGET) > $(TARGET).s
+
 clean:
 	rm -f $(OBJ) $(TARGET) $(TARGET).hex

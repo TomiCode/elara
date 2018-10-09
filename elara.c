@@ -13,7 +13,6 @@
 
 int main(void)
 {
-
   /* Wait a while for startup. */
   _delay_ms(5);
 
@@ -27,6 +26,7 @@ int main(void)
 
   /* Setup nRF24 radio registers. */
   nrf24_setup();
+  status_wdt();
 
   printf("elara v0.01 boot\r\n");
 
