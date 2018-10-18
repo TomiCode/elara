@@ -5,6 +5,8 @@
 
 #include "../spec/nrf24.h"
 
+void nrf24_address_init(void);
+
 /* Initialize our SPI registers and radio data. */
 void nrf24_init(void)
 {
@@ -68,6 +70,29 @@ void nrf24_setup(void)
 
   rf_config |= MASK_RX_DR | EN_CRC | PWR_UP;
   printf("nRF status: %02x\r\n", nrf24_spi_write(W_REGISTER(CONFIG), &rf_config, sizeof(uint8_t)));
+  
+  _delay_ms(20);
+  nrf24_address_init();
+}
+
+void nrf24_print_hex(uint8_t *buffer, uint8_t size)
+{
+  for(; size > 0; size--)
+    printf("%02x", *(buffer++));
+  printf("\r\n");
+}
+
+void nrf24_address_init(void)
+{
+  uint8_t addr[5] = {0};
+  printf("nRF address status: %02x\r\n", nrf24_spi_read(RX_ADDR_P0, (uint8_t*)&addr, sizeof(uint8_t) * 5));
+
+  printf("RX_ADDR_P0: ");
+  nrf24_print_hex((uint8_t*)&addr, sizeof(uint8_t) * 5);
+
+  nrf24_spi_read(TX_ADDR, (uint8_t*)&addr, sizeof(uint8_t) * 5);
+  printf("RX_ADDR_P1: ");
+  nrf24_print_hex((uint8_t*)&addr, sizeof(uint8_t) * 5);
 }
 
 /* Radio interrupt handler. */

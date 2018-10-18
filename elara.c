@@ -27,6 +27,9 @@ int main(void)
   /* Setup nRF24 radio registers. */
   nrf24_setup();
 
+  /* Enable sleep modes. */
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+
   /* Enable global interrupts. */
   sei();
 
@@ -34,9 +37,7 @@ int main(void)
   _delay_ms(50);
 
   for(;;) {
-    set_sleep_mode(0x6);
     sleep_mode();
-
     PORTD ^= _BV(IO_LEDSTAT);
   }
 

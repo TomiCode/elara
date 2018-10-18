@@ -8,15 +8,16 @@
 /* Initialize other system hardware. */
 void system_init(void)
 {
-  DDRC |= _BV(IO_RELAY);
-  DDRD |= _BV(IO_LEDSTAT);
+  DDRB = 0;
+  DDRC = _BV(IO_RELAY);
+  DDRD = _BV(IO_LEDSTAT);
 }
 
 /* Setup and start watchdog timer. */
 void system_wdt(void)
 {
   /* Enable watchdog interrupt and set prescaler to 1s. */
-  WDTCSR = _BV(WDCE);
+  WDTCSR = _BV(WDCE) | _BV(WDE);
   WDTCSR = _BV(WDIE) | _BV(WDP2) | _BV(WDP1);
   wdt_reset();
 }
@@ -32,3 +33,4 @@ ISR(INT0_vect)
 {
 
 }
+
