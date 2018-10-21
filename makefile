@@ -31,7 +31,7 @@ $(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) -mmcu=$(MCU) -DF_CPU=$(F_CPU)UL $< -o $@ -c
 
 upload:
-	avrdude -v -p$(MCU) -cstk500 -P$(USB_DEV) -b57600 -U flash:w:$(TARGET).hex:i
+	avrdude -v -p$(MCU) -cstk500 -P$(USB_DEV) -b115200 -U flash:w:$(TARGET).hex:i
 
 dump:
 	avr-objdump --disassemble-all --source $(TARGET) > $(TARGET).s

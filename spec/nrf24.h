@@ -46,8 +46,12 @@
 #define DYNPD 0x1C
 #define FEATURE 0x1D
 
-#define MASK_RX_DR 0x40
-#define EN_CRC 0x04
-#define PWR_UP 0x02
+/* Config register bits. */
+#define MASK_RX_DR 6
+#define MASK_TX_DS 5
+#define MASK_MAX_RT 4
+#define EN_CRC 3
+#define PWR_UP 1
+#define PRIX_RX 0
 
 #endif
