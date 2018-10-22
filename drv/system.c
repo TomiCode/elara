@@ -8,6 +8,8 @@
 
 extern volatile uint8_t sys_status;
 
+static uint8_t relay_status;
+
 /* Initialize other system hardware. */
 void system_init(void)
 {
@@ -28,6 +30,23 @@ void system_wdt(void)
   wdt_reset();
 }
 
+void set_relay_on(void)
+{
+  relay_status = 1;
+  PORTC |= _BV(IO_RELAY);
+}
+
+void set_relay_off(void)
+{
+  relay_status = 0;
+  PORTC &= ~_BV(IO_RELAY);
+}
+
+uint8_t relay_state(void)
+{
+  return relay_status;
+}
+
 /* Watchdog interrupt handler. */
 ISR(WDT_vect)
 {
@@ -37,6 +56,6 @@ ISR(WDT_vect)
 /* Front button interrupt handler. */
 ISR(INT0_vect)
 {
-
+  sys_status = 0x22;
 }
 

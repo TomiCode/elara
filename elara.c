@@ -52,6 +52,17 @@ int main(void)
       nrf24_test(rf_test_payload);
       sys_status = 0x00;
     }
+    if (sys_status == 0x22) {
+      if(relay_state()) {
+        set_relay_off();
+        ws2812_test(2);
+      }
+      else {
+        set_relay_on();
+        ws2812_test(1);
+      }
+      sys_status = 0x00;
+    }
 
   }
 

@@ -47,10 +47,21 @@ void ws2812_set_color(ws2812_color_t *color)
 /* Proably not this type. */
 void ws2812_test(uint8_t color)
 {
-  (void)color;
+  // (void)color;
 
-  ws2812_color_t test = {0x00, 0x2b, 0x2b};
-  while(test.blue > 0) {
+  ws2812_color_t test; // = {0x00, 0x2b, 0x2b};
+  if (color == 1) {
+    test.red = 0x2f;
+    test.green = 0x00;
+    test.blue = 0x2f;
+  }
+  else {
+    test.red = 0x2f;
+    test.green = 0x2f;
+    test.blue = 0x00;
+  }
+
+  while(test.red > 0 || test.blue > 0) {
     ws2812_set_color(&test);
     _delay_ms(10);
     if (test.blue > 0)
