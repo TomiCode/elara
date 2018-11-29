@@ -3,6 +3,7 @@
 
 // volatile uint8_t s
 
-void drv_acs724_init(void);
+void acs724_init(void);
+void acs724_start(void);
 
 #endif // DRV_ACS724_H

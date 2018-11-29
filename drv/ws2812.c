@@ -3,7 +3,9 @@
 #include <util/atomic.h>
 
 #include "ws2812.h"
-#include "../spec/hardware.h"
+#include <hardware.h>
+
+#define MAX(a,b) ((a > b) ? a : b)
 
 /* Initialize our front panel LED. */
 void ws2812_init(void)
@@ -41,6 +43,22 @@ void ws2812_set_color(ws2812_color_t *color)
     ws2812_push(color->green, 8);
     ws2812_push(color->red, 8);
     ws2812_push(color->blue, 8);
+  }
+}
+
+void ws2812_color_fadeout(ws2812_color_t color, uint8_t step, uint8_t delay)
+{
+  delay = (delay / step);
+  ws2812_color_t steps = {MAX(color.green / step, 1), MAX(color.red / step, 1), MAX(color.blue / step, 1)};
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+  {
+    while(step--) {
+      ws2812_set_color(&color);
+      color.green -= steps.green;
+      color.red -= steps.red;
+      color.blue -= steps.blue;
+      _delay_ms(delay);
+    }
   }
 }
 

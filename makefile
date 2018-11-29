@@ -12,7 +12,7 @@ CC = avr-gcc
 # objcopy toolchain binary
 OBJCPY = avr-objcopy
 # All compiler flags
-CFLAGS = -Wall -Wextra -Os -g -flto -fuse-linker-plugin -Wl,--gc-sections
+CFLAGS = -Wall -Wextra -Os -g -flto -fuse-linker-plugin -Wl,--gc-sections -Ispec
 # USB Device for programming the development board
 USB_DEV = /dev/cu.usbmodem00177832
 

@@ -2,7 +2,7 @@
 #define HARDWARE_H
 
 /* ADC Converter pins. */
-#define IO_ADC_SENSOR 0x6
+#define IO_ADC_SENSOR 0x06
 
 /* IO Register B */
 #define IO_SS   2
