@@ -2,7 +2,7 @@
 #define NRF24_SPEC_H
 
 /* Hardware mapping. */
-#include "hardware.h"
+#include <hardware.h>
 
 /* SPI Commands. */
 #define R_REGISTER(reg) (0x00 | (reg & 0x1F))

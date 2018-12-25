@@ -8,11 +8,13 @@
 #include "drv/system.h"
 #include "drv/ws2812.h"
 
-#include "spec/hardware.h"
+#include "sys/net.h"
+#include "sys/switch.h"
+
+#include <hardware.h>
+#include <system.h>
 
 volatile uint8_t sys_status = 0;
-
-uint8_t rf_test_payload[32] = {0};
 
 int main(void)
 {
@@ -25,21 +27,17 @@ int main(void)
   nrf24_init();
   ws2812_init();
 
-  /* Start system watchdog. */
-  system_wdt();
-
   /* Setup nRF24 radio registers. */
   nrf24_setup();
 
   /* Enable sleep modes. */
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
 
-  // ws2812_test(1);
   /* Enable global interrupts. */
   sei();
 
   printf("elara v0.01 \r\n");
-  _delay_ms(5);
+  _delay_ms(50);
 
   struct ws2812_color state_on = {0x00, 0x22, 0x13};
   struct ws2812_color state_off = {0x00, 0x2f, 0x00};
@@ -54,30 +52,21 @@ int main(void)
     PORTD |= _BV(IO_LEDSTAT);
     _delay_us(200);
 
-    if (sys_status == 0x13) {
-        ws2812_mode(&state_test, WS2812_MODE_FADE);
-        sys_status = 0;
+    if (sys_status & STAT_WDT) {
+        sys_status &= ~STAT_WDT;
+        net_task();
     }
-    if (sys_status == 0xFF) {
-      nrf24_test(rf_test_payload);
-      sys_status = 0x00;
+
+    if (sys_status & STAT_BTN) {
+        sys_status &= ~STAT_BTN;
+        switch_handle();
     }
-    if (sys_status == 0x22) {
-      if(relay_state()) {
-        set_relay_off();
-        ws2812_mode(&state_off, WS2812_MODE_FADE);
-        // ws2812_test(2);
-        // ws2812_color_fadeout(state_on, 100, 100);
-      }
-      else {
-        set_relay_on();
-        ws2812_mode(&state_on, WS2812_MODE_FADE);
-        //ws2812_test(1);
-        // ws2812_color_fadeout(state_off, 100, 100);
-      }
-      sys_status = 0x00;
+
+    if (sys_status & STAT_RADIO) {
+        sys_status &= ~STAT_RADIO;
+        net_handle();
     }
-    // acs724_start();
+
     PORTD &= ~_BV(IO_LEDSTAT);
   }
 

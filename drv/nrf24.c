@@ -1,18 +1,20 @@
 #include <stdio.h>
+#include <string.h>
 #include <avr/io.h>
+#include <avr/eeprom.h>
 #include <avr/interrupt.h>
 #include <util/atomic.h>
 #include <util/delay.h>
 
 #include "nrf24.h"
-#include "../spec/nrf24.h"
+
+#include <nrf24.h>
+#include <system.h>
 
 extern volatile uint8_t sys_status;
 
-static uint8_t rf_addresses[][5] = {
-  { 0xE7, 0xE7, 0xE7, 0xE7, 0xE7 },
-  { 0xC2, 0xC2, 0xC2, 0xC2, 0xC2 }
-};
+uint8_t nrf24_base_addr[5] = { 0xC2, 0xC2, 0xC2, 0xC2, 0xC2 };
+uint8_t nrf24_device_addr[5] = { 0xA0, 0xA0, 0xA0, 0xA0, 0xA0 };
 
 /* Initialize our SPI registers and radio data. */
 void nrf24_init(void)
@@ -130,38 +132,96 @@ static uint8_t nrf24_register_write(uint8_t address, uint8_t value)
   return status;
 }
 
+void nrf24_set_address(uint8_t *addr)
+{
+    if (addr)
+        memcpy(nrf24_device_addr, addr, sizeof(nrf24_device_addr));
+
+    spi_write_buffer(W_REGISTER(RX_ADDR_P1), nrf24_device_addr,
+            sizeof(nrf24_device_addr));
+    nrf24_register_write(RX_PW_P1, 0x20);
+}
+
 void nrf24_setup(void)
 {
 #ifdef HAS_RF_REG3V3
-  enable_3v3_regulator();
+    enable_3v3_regulator();
+    _delay_ms(20);
 #endif
-  _delay_ms(100);
+    nrf24_register_write(CONFIG, _BV(MASK_TX_DS) |
+          _BV(MASK_MAX_RT) | _BV(EN_CRC) | _BV(PWR_UP));
+    _delay_ms(4);
 
-  nrf24_register_write(CONFIG, _BV(MASK_TX_DS) | _BV(MASK_MAX_RT) | _BV(EN_CRC) | _BV(PWR_UP));
-  _delay_ms(5);
+    nrf24_register_write(FEATURE, 0x00);
+    nrf24_register_write(DYNPD, 0x00);
 
-  nrf24_register_write(FEATURE, 0x00);
-  nrf24_register_write(DYNPD, 0x00);
-  nrf24_register_write(RX_PW_P0, 32);
-  nrf24_register_write(RX_PW_P1, 32);
+    spi_write_buffer(W_REGISTER(RX_ADDR_P0), nrf24_base_addr,
+            sizeof(nrf24_base_addr));
+    spi_write_buffer(W_REGISTER(TX_ADDR), nrf24_base_addr,
+            sizeof(nrf24_base_addr));
+    nrf24_register_write(RX_PW_P0, 0x20);
 
-  // spi_write_buffer(W_REGISTER(RX_ADDR_P0), rf_addresses[1], 5);
-  // spi_write_buffer(W_REGISTER(TX_ADDR), rf_addresses[1], 5);
-  // spi_write_buffer(W_REGISTER(RX_ADDR_P1), rf_addresses[0], 5);
+    nrf24_set_address(NULL);
 
-  spi_command(FLUSH_RX);
-  spi_command(FLUSH_TX);
+    spi_command(FLUSH_RX);
+    spi_command(FLUSH_TX);
 
-  nrf24_register_write(RF_CH, 0x34);
-  nrf24_register_write(CONFIG, (nrf24_register_read(CONFIG)) | _BV(PRIX_RX));
-  set_ce_high();
-  _delay_us(130);
+    nrf24_register_write(RF_CH, 0x34);
+    nrf24_register_write(CONFIG, (nrf24_register_read(CONFIG)) | _BV(PRIX_RX));
+
+    set_ce_high();
+    _delay_us(130);
+}
+
+int nrf24_payload_read(void *data)
+{
+    uint8_t fifo;
+
+    fifo = nrf24_register_read(FIFO_STATUS);
+    if (fifo & _BV(1))
+        return -1;
+
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+    {
+        spi_read_buffer(R_RX_PAYLOAD, data, 32);
+        spi_command(FLUSH_RX);
+    }
+
+    return 0;
+}
+
+void nrf24_payload_write(void *data)
+{
+    uint8_t r_fifo, r_config;
+
+    r_fifo = nrf24_register_read(FIFO_STATUS);
+    if (r_fifo & _BV(5)) {
+        spi_command(FLUSH_TX);
+        nrf24_register_write(STATUS, 0x70);
+    }
+
+    set_ce_low();
+    r_config = nrf24_register_read(CONFIG);
+    nrf24_register_write(CONFIG, r_config & ~_BV(PRIX_RX));
+
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+    {
+        spi_write_buffer(W_TX_PAYLOAD, data, 32);
+    }
+
+    set_ce_high();
+    _delay_us(10);
+    set_ce_low();
+
+    _delay_us(100);
+    nrf24_register_write(CONFIG, r_config);
+    set_ce_high();
 }
 
 void nrf24_debug(void)
 {
     uint8_t config, status;
-    uint8_t a, b, c;
+    uint8_t a, b;
     uint8_t addr[5] = {0};
 
     config = nrf24_register_read(CONFIG);
@@ -190,24 +250,7 @@ void nrf24_debug(void)
     _delay_ms(5);
 }
 
-uint8_t nrf24_test(uint8_t *buffer)
-{
-  nrf24_register_write(STATUS, 0x70);
-
-  // if ((nrf24_register_read(FIFO_STATUS) & 0x01) == 0x01)
-  //  return 0;
-
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
-  {
-    spi_read_buffer(R_RX_PAYLOAD, buffer, 32);
-    printf("payload: %02x \r\n", *buffer);
-    _delay_ms(5);
-  }
-  return 1;
-}
-
-/* Radio interrupt handler. */
 ISR(INT1_vect)
 {
-  sys_status = 0xFF;
+    sys_status |= STAT_RADIO;
 }

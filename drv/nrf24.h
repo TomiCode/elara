@@ -5,7 +5,11 @@
 
 void nrf24_init(void);
 void nrf24_setup(void);
+void nrf24_set_address(uint8_t *addr);
+
+int nrf24_payload_read(void *);
+void nrf24_payload_write(void *);
+
 void nrf24_debug(void);
-uint8_t nrf24_test(uint8_t *buffer);
 
 #endif // DRV_NRF24_H

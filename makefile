@@ -5,7 +5,8 @@ F_CPU = 16000000
 # Target project name
 TARGET = elara
 # All source and object files
-SRC = $(TARGET).c drv/acs724.c drv/nrf24.c drv/serial.c drv/ws2812.c drv/system.c
+SRC = $(TARGET).c drv/acs724.c drv/nrf24.c drv/serial.c \
+	drv/ws2812.c drv/system.c sys/net.c sys/switch.c
 OBJ = $(SRC:.c=.o)
 # What compier whe should use
 CC = avr-gcc
