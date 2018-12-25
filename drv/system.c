@@ -51,6 +51,7 @@ uint8_t relay_state(void)
 ISR(WDT_vect)
 {
   wdt_reset();
+  sys_status = 0x13;
 }
 
 /* Front button interrupt handler. */

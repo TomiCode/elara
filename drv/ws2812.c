@@ -5,90 +5,158 @@
 #include "ws2812.h"
 #include <hardware.h>
 
-#define MAX(a,b) ((a > b) ? a : b)
+struct ws2812_element {
+    union {
+        struct {
+            uint8_t lo;
+            uint8_t hi;
+        } __attribute__((packed));
+        uint16_t value;
+    } color;
+
+    uint8_t step;
+    uint8_t next;
+
+    uint8_t enable  : 1;
+    uint8_t stop    : 1;
+    uint8_t dir     : 1;
+    uint8_t fade    : 1;
+};
+
+struct ws2812_state {
+    struct ws2812_element red;
+    struct ws2812_element green;
+    struct ws2812_element blue;
+};
+
+static struct ws2812_state state;
 
 /* Initialize our front panel LED. */
 void ws2812_init(void)
 {
-  DDRC |= _BV(IO_FLED);
+    DDRC |= _BV(IO_FLED);
 }
 
 static inline void cpu_wait(void)
 {
-  asm volatile (
-    "nop \n\t"
-    "nop \n\t"
-  );
+    asm volatile (
+        "nop \n\t"
+        "nop \n\t"
+    );
 }
 
-static inline void ws2812_push(uint8_t byte, uint8_t bits)
+static inline void ws2812_push(uint8_t byte)
 {
-   while(bits) {
-    PORTC |= _BV(IO_FLED);
-    cpu_wait();
-    if (!(byte & 0x80))
-      PORTC &= ~_BV(IO_FLED);
-    byte <<= 1;
-    cpu_wait();
-    PORTC &= ~_BV(IO_FLED);
-    cpu_wait();
-    bits--;
-  }
-}
+    uint8_t count;
 
-void ws2812_set_color(ws2812_color_t *color)
-{
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
-  {
-    ws2812_push(color->green, 8);
-    ws2812_push(color->red, 8);
-    ws2812_push(color->blue, 8);
-  }
-}
+    for (count = 0; count < 8; count++) {
+        PORTC |= _BV(IO_FLED);
+        cpu_wait();
 
-void ws2812_color_fadeout(ws2812_color_t color, uint8_t step, uint8_t delay)
-{
-  delay = (delay / step);
-  ws2812_color_t steps = {MAX(color.green / step, 1), MAX(color.red / step, 1), MAX(color.blue / step, 1)};
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
-  {
-    while(step--) {
-      ws2812_set_color(&color);
-      color.green -= steps.green;
-      color.red -= steps.red;
-      color.blue -= steps.blue;
-      _delay_ms(delay);
+        if (!(byte & 0x80))
+            PORTC &= ~_BV(IO_FLED);
+
+        byte <<= 1;
+        cpu_wait();
+
+        PORTC &= ~_BV(IO_FLED);
+        cpu_wait();
     }
-  }
 }
 
-/* Proably not this type. */
-void ws2812_test(uint8_t color)
+int ws2812_has_work(void)
 {
-  // (void)color;
+    if (state.red.enable || state.green.enable || state.blue.enable)
+        return 1;
 
-  ws2812_color_t test; // = {0x00, 0x2b, 0x2b};
-  if (color == 1) {
-    test.red = 0x2f;
-    test.green = 0x00;
-    test.blue = 0x2f;
-  }
-  else {
-    test.red = 0x2f;
-    test.green = 0x2f;
-    test.blue = 0x00;
-  }
+    return 0;
+}
 
-  while(test.red > 0 || test.blue > 0) {
-    ws2812_set_color(&test);
-    _delay_ms(10);
-    if (test.blue > 0)
-      test.blue--;
-    if (test.red > 0)
-      test.red--;
-    if (test.green > 0)
-      test.green--;
-  }
-  ws2812_set_color(&test);
+static void ws2812_update(struct ws2812_element *el)
+{
+    if (!el->enable || el->stop)
+        return;
+
+    if (el->dir)
+        el->color.value += el->step;
+    else
+        el->color.value -= el->step;
+
+    if (el->color.hi == el->next) {
+        if (el->fade && el->next) {
+            el->step = el->color.hi;
+            el->next = 0;
+            el->stop = 1;
+            el->dir = 0;
+        }
+        else
+            el->enable = 0;
+    }
+}
+
+static inline void ws2812_set_state(struct ws2812_element *el, uint8_t val,
+        uint8_t mode)
+{
+    el->next = val;
+    el->color.lo = 0;
+
+    el->enable = 0;
+    el->stop = 0;
+    el->step = 0;
+
+    if (mode == WS2812_MODE_FADE)
+        el->fade = 1;
+    else
+        el->fade = 0;
+
+    if (el->color.hi > val) {
+        el->dir = 0;
+        el->step = el->color.hi - val;
+    }
+    else if (el->color.hi < val){
+        el->dir = 1;
+        el->step = val - el->color.hi;
+    }
+
+    if (el->step)
+        el->enable = 1;
+}
+
+static inline int ws2812_sync(struct ws2812_element *el)
+{
+    return (el->enable && el->stop) || !el->enable;
+}
+
+void ws2812_schedule(void)
+{
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+    {
+        ws2812_update(&state.red);
+        ws2812_update(&state.blue);
+        ws2812_update(&state.green);
+
+        if (ws2812_sync(&state.red) && ws2812_sync(&state.blue) && ws2812_sync(&state.green)) {
+            if (state.red.enable)
+                state.red.stop = 0;
+
+            if (state.blue.enable)
+                state.blue.stop = 0;
+
+            if (state.green.enable)
+                state.green.stop = 0;
+        }
+
+        ws2812_push(state.green.color.hi);
+        ws2812_push(state.red.color.hi);
+        ws2812_push(state.blue.color.hi);
+    }
+    _delay_us(300);
+}
+
+void ws2812_mode(struct ws2812_color *color, uint8_t mode)
+{
+    ws2812_set_state(&state.red, color->red, mode);
+    ws2812_set_state(&state.blue, color->blue, mode);
+    ws2812_set_state(&state.green, color->green, mode);
 }
 

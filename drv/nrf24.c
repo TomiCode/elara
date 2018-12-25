@@ -10,8 +10,8 @@
 extern volatile uint8_t sys_status;
 
 static uint8_t rf_addresses[][5] = {
-  { 0xA9, 0x55, 0xFC, 0xB1, 0x80 },
-  { 0xA9, 0x55, 0xFC, 0xB2, 0x00 }
+  { 0xE7, 0xE7, 0xE7, 0xE7, 0xE7 },
+  { 0xC2, 0xC2, 0xC2, 0xC2, 0xC2 }
 };
 
 /* Initialize our SPI registers and radio data. */
@@ -143,14 +143,51 @@ void nrf24_setup(void)
   nrf24_register_write(FEATURE, 0x00);
   nrf24_register_write(DYNPD, 0x00);
   nrf24_register_write(RX_PW_P0, 32);
+  nrf24_register_write(RX_PW_P1, 32);
+
+  // spi_write_buffer(W_REGISTER(RX_ADDR_P0), rf_addresses[1], 5);
+  // spi_write_buffer(W_REGISTER(TX_ADDR), rf_addresses[1], 5);
+  // spi_write_buffer(W_REGISTER(RX_ADDR_P1), rf_addresses[0], 5);
 
   spi_command(FLUSH_RX);
   spi_command(FLUSH_TX);
 
-  nrf24_register_write(RF_CH, 0x2d);
+  nrf24_register_write(RF_CH, 0x34);
   nrf24_register_write(CONFIG, (nrf24_register_read(CONFIG)) | _BV(PRIX_RX));
   set_ce_high();
   _delay_us(130);
+}
+
+void nrf24_debug(void)
+{
+    uint8_t config, status;
+    uint8_t a, b, c;
+    uint8_t addr[5] = {0};
+
+    config = nrf24_register_read(CONFIG);
+    status = nrf24_register_read(STATUS);
+
+    printf("nrf24l01 STATUS: %02x, CONFIG: %02x \r\n", status, config);
+
+    spi_read_buffer(RX_ADDR_P0, addr, 5);
+    printf("RX_ADDR_P0: %02x %02x %02x %02x %02x \r\n", addr[0], addr[1], addr[2], addr[3], addr[4]);
+
+    spi_read_buffer(RX_ADDR_P1, addr, 5);
+    printf("RX_ADDR_P1: %02x %02x %02x %02x %02x \r\n", addr[0], addr[1], addr[2], addr[3], addr[4]);
+
+    spi_read_buffer(TX_ADDR, addr, 5);
+    printf("TX_ADDR: %02x %02x %02x %02x %02x \r\n", addr[0], addr[1], addr[2], addr[3], addr[4]);
+
+    status = nrf24_register_read(FIFO_STATUS);
+    printf("FIFO_STATUS: %02x \r\n", status);
+
+    a = nrf24_register_read(RX_PW_P0);
+    b = nrf24_register_read(RX_PW_P1);
+    printf("RX_PW_P0: %02x, RX_PW_P1: %02x \r\n", a, b);
+
+    status = nrf24_register_read(RF_CH);
+    printf("RF_CH: %02x \r\n", status);
+    _delay_ms(5);
 }
 
 uint8_t nrf24_test(uint8_t *buffer)

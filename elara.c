@@ -41,16 +41,23 @@ int main(void)
   printf("elara v0.01 \r\n");
   _delay_ms(5);
 
-  ws2812_color_t state_on = {0x2f, 0x00, 0x00};
-  ws2812_color_t state_off = {0x00, 0x2f, 0x00};
+  struct ws2812_color state_on = {0x00, 0x22, 0x13};
+  struct ws2812_color state_off = {0x00, 0x2f, 0x00};
+  struct ws2812_color state_test = {0x02, 0x1e, 0x0a};
 
   for(;;) {
-    sleep_mode();
+      if (ws2812_has_work())
+          ws2812_schedule();
+      else
+        sleep_mode();
 
     PORTD |= _BV(IO_LEDSTAT);
-    _delay_ms(10);
-    PORTD &= ~_BV(IO_LEDSTAT);
+    _delay_us(200);
 
+    if (sys_status == 0x13) {
+        ws2812_mode(&state_test, WS2812_MODE_FADE);
+        sys_status = 0;
+    }
     if (sys_status == 0xFF) {
       nrf24_test(rf_test_payload);
       sys_status = 0x00;
@@ -58,18 +65,20 @@ int main(void)
     if (sys_status == 0x22) {
       if(relay_state()) {
         set_relay_off();
-        ws2812_test(2);
+        ws2812_mode(&state_off, WS2812_MODE_FADE);
+        // ws2812_test(2);
         // ws2812_color_fadeout(state_on, 100, 100);
       }
       else {
         set_relay_on();
-        ws2812_test(1);
+        ws2812_mode(&state_on, WS2812_MODE_FADE);
+        //ws2812_test(1);
         // ws2812_color_fadeout(state_off, 100, 100);
       }
       sys_status = 0x00;
     }
-
-    acs724_start();
+    // acs724_start();
+    PORTD &= ~_BV(IO_LEDSTAT);
   }
 
   return 0;
