@@ -148,12 +148,12 @@ void nrf24_setup(void)
     enable_3v3_regulator();
     _delay_ms(20);
 #endif
-    nrf24_register_write(CONFIG, _BV(MASK_TX_DS) |
-          _BV(MASK_MAX_RT) | _BV(EN_CRC) | _BV(PWR_UP));
-    _delay_ms(4);
+    nrf24_register_write(CONFIG, _BV(EN_CRC) | _BV(PWR_UP));
+    _delay_ms(10);
 
     nrf24_register_write(FEATURE, 0x00);
     nrf24_register_write(DYNPD, 0x00);
+    nrf24_register_write(SETUP_RETR, 0x50);
 
     spi_write_buffer(W_REGISTER(RX_ADDR_P0), nrf24_base_addr,
             sizeof(nrf24_base_addr));
@@ -171,6 +171,29 @@ void nrf24_setup(void)
 
     set_ce_high();
     _delay_us(130);
+}
+
+uint8_t nrf24_fetch_status(void)
+{
+    uint8_t r_status, r_config;
+
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+    {
+        set_csn_low();
+        r_status = spi_send_frame(R_REGISTER(CONFIG));
+        r_config = spi_send_frame(0x00);
+        set_csn_high();
+    }
+
+    if (r_status & 0x70)
+        nrf24_register_write(STATUS, 0x70);
+
+    if ((r_config & PRIX_RX) == 0) {
+        nrf24_register_write(CONFIG, r_config | _BV(PRIX_RX));
+        set_ce_high();
+    }
+
+    return r_status;
 }
 
 int nrf24_payload_read(void *data)
@@ -192,30 +215,25 @@ int nrf24_payload_read(void *data)
 
 void nrf24_payload_write(void *data)
 {
-    uint8_t r_fifo, r_config;
+    uint8_t r_fifo;
 
+    nrf24_register_write(STATUS, 0x70);
     r_fifo = nrf24_register_read(FIFO_STATUS);
-    if (r_fifo & _BV(5)) {
+    if (r_fifo & _BV(5))
         spi_command(FLUSH_TX);
-        nrf24_register_write(STATUS, 0x70);
-    }
 
     set_ce_low();
-    r_config = nrf24_register_read(CONFIG);
-    nrf24_register_write(CONFIG, r_config & ~_BV(PRIX_RX));
+    nrf24_register_write(CONFIG,
+            nrf24_register_read(CONFIG) & ~_BV(PRIX_RX));
 
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
     {
-        spi_write_buffer(W_TX_PAYLOAD, data, 32);
+        spi_write_buffer(0xA0, data, 32);
     }
 
     set_ce_high();
     _delay_us(10);
     set_ce_low();
-
-    _delay_us(100);
-    nrf24_register_write(CONFIG, r_config);
-    set_ce_high();
 }
 
 void nrf24_debug(void)

@@ -39,10 +39,6 @@ int main(void)
   printf("elara v0.01 \r\n");
   _delay_ms(50);
 
-  struct ws2812_color state_on = {0x00, 0x22, 0x13};
-  struct ws2812_color state_off = {0x00, 0x2f, 0x00};
-  struct ws2812_color state_test = {0x02, 0x1e, 0x0a};
-
   for(;;) {
       if (ws2812_has_work())
           ws2812_schedule();
