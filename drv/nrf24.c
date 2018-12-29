@@ -14,7 +14,9 @@
 extern volatile uint8_t sys_status;
 
 uint8_t nrf24_base_addr[5] = { 0xC2, 0xC2, 0xC2, 0xC2, 0xC2 };
-uint8_t nrf24_device_addr[5] = { 0xA0, 0xA0, 0xA0, 0xA0, 0xA0 };
+uint8_t nrf24_device_addr[5] = { 0xE7, 0xE7, 0xE7, 0xE7, 0xE7 };
+
+static volatile uint8_t nrf24_interrupt;
 
 /* Initialize our SPI registers and radio data. */
 void nrf24_init(void)
@@ -60,6 +62,11 @@ static inline void set_ce_low(void)
 static inline void set_ce_high(void)
 {
    PORTC |= _BV(IO_RF_CE);
+}
+
+static inline int get_ce_state(void)
+{
+    return (PORTC & _BV(IO_RF_CE)) == _BV(IO_RF_CE);
 }
 
 /* Put a byte on the MOSI line and return MISO content. */
@@ -134,12 +141,23 @@ static uint8_t nrf24_register_write(uint8_t address, uint8_t value)
 
 void nrf24_set_address(uint8_t *addr)
 {
-    if (addr)
-        memcpy(nrf24_device_addr, addr, sizeof(nrf24_device_addr));
+    uint8_t ce_state = 0;
 
-    spi_write_buffer(W_REGISTER(RX_ADDR_P1), nrf24_device_addr,
-            sizeof(nrf24_device_addr));
+    if (addr == NULL)
+        addr = nrf24_device_addr;
+
+    if (get_ce_state()) {
+        ce_state = 1;
+        set_ce_low();
+    }
+
+    spi_write_buffer(W_REGISTER(RX_ADDR_P1), addr, sizeof(nrf24_device_addr));
     nrf24_register_write(RX_PW_P1, 0x20);
+
+    if (ce_state) {
+        set_ce_high();
+        _delay_us(130);
+    }
 }
 
 void nrf24_setup(void)
@@ -175,23 +193,11 @@ void nrf24_setup(void)
 
 uint8_t nrf24_fetch_status(void)
 {
-    uint8_t r_status, r_config;
+    uint8_t r_status;
 
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
-    {
-        set_csn_low();
-        r_status = spi_send_frame(R_REGISTER(CONFIG));
-        r_config = spi_send_frame(0x00);
-        set_csn_high();
-    }
-
+    r_status = nrf24_register_read(STATUS);
     if (r_status & 0x70)
         nrf24_register_write(STATUS, 0x70);
-
-    if ((r_config & PRIX_RX) == 0) {
-        nrf24_register_write(CONFIG, r_config | _BV(PRIX_RX));
-        set_ce_high();
-    }
 
     return r_status;
 }
@@ -213,18 +219,27 @@ int nrf24_payload_read(void *data)
     return 0;
 }
 
+static inline void nrf24_wait_until_interrupt(void)
+{
+    nrf24_interrupt = 0;
+    while(!nrf24_interrupt);
+}
+
 void nrf24_payload_write(void *data)
 {
-    uint8_t r_fifo;
+    uint8_t r_fifo, r_config, r_status;
+    uint8_t rx_restore = 0;
 
-    nrf24_register_write(STATUS, 0x70);
     r_fifo = nrf24_register_read(FIFO_STATUS);
-    if (r_fifo & _BV(5))
+    if ((r_fifo & _BV(4)) == 0)
         spi_command(FLUSH_TX);
 
-    set_ce_low();
-    nrf24_register_write(CONFIG,
-            nrf24_register_read(CONFIG) & ~_BV(PRIX_RX));
+    r_config = nrf24_register_read(CONFIG);
+    if (get_ce_state() && (r_config & _BV(PRIX_RX))) {
+        rx_restore = 1;
+        set_ce_low();
+        nrf24_register_write(CONFIG, r_config & ~_BV(PRIX_RX));
+    }
 
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
     {
@@ -234,6 +249,23 @@ void nrf24_payload_write(void *data)
     set_ce_high();
     _delay_us(10);
     set_ce_low();
+
+    nrf24_wait_until_interrupt();
+    r_status = nrf24_register_read(STATUS);
+    if (r_status & NRF24_MAX_RT) {
+         spi_command(FLUSH_TX);
+         sys_status |= STAT_TX_ERR;
+    }
+
+    if (r_status & (NRF24_MAX_RT | NRF24_TX_DS))
+        sys_status &= ~STAT_RADIO;
+
+    nrf24_register_write(STATUS, 0x70);
+    if (rx_restore) {
+        nrf24_register_write(CONFIG, r_config);
+        set_ce_high();
+        _delay_us(130);
+    }
 }
 
 void nrf24_debug(void)
@@ -271,4 +303,5 @@ void nrf24_debug(void)
 ISR(INT1_vect)
 {
     sys_status |= STAT_RADIO;
+    nrf24_interrupt = 1;
 }

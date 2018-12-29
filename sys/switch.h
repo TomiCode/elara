@@ -6,5 +6,6 @@
 
 void switch_handle(void);
 void switch_update_state(uint8_t state);
+uint8_t switch_current_state(void);
 
 #endif // SWITCH_H

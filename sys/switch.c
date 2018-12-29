@@ -39,3 +39,8 @@ void switch_update_state(uint8_t state)
     }
     switch_state = state;
 }
+
+uint8_t switch_current_state(void)
+{
+    return switch_state;
+}

@@ -16,6 +16,8 @@
 
 volatile uint8_t sys_status = 0;
 
+static struct ws2812_color error_c = { 0x00, 0x20, 0x00 };
+
 int main(void)
 {
   /* Initialize hardware subsystem. */
@@ -61,6 +63,11 @@ int main(void)
     if (sys_status & STAT_RADIO) {
         sys_status &= ~STAT_RADIO;
         net_handle();
+    }
+
+    if (sys_status & STAT_TX_ERR) {
+        sys_status &= ~STAT_TX_ERR;
+        ws2812_mode(&error_c, WS2812_MODE_FADE);
     }
 
     PORTD &= ~_BV(IO_LEDSTAT);
