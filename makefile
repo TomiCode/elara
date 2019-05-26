@@ -14,7 +14,7 @@ CC = avr-gcc
 OBJCPY = avr-objcopy
 # All compiler flags
 CFLAGS = -Wall -Wextra -Os -g -flto -fuse-linker-plugin -Wl,--gc-sections \
-		 -Ispec -DELARA_REV=0x$(shell git rev-parse --short HEAD)
+		 -Ispec -DELARA_REV=0x$(shell git rev-parse --short HEAD) -pedantic
 # USB Device for programming the development board
 USB_DEV = /dev/cu.usbmodem00177832
 

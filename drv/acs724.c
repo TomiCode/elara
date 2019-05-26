@@ -17,25 +17,20 @@ void acs724_init(void)
 }
 
 // Start the ADC conversion.
-void acs724_start(void)
+int16_t acs724_read(void)
 {
   uint16_t result;
-  int16_t value;
 
   ADCSRA |= _BV(ADSC);
   loop_until_bit_is_clear(ADCSRA, ADSC);
 
   result = ADCL;
   result |= (ADCH << 8);
-
-  value = (result - 511) * 24;
-
-  printf("adc: %03x, %d mA\r\n", result, value);
-  _delay_ms(10);
+  return (result - 511) * 24;
 }
 
 // ADC Complete interrupt handler.
-ISR(ADC_vect)
-{
-  sys_status = 0x44;
-}
+// ISR(ADC_vect)
+// {
+//   sys_status |= 0;
+// }

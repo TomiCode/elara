@@ -52,13 +52,10 @@ static inline void ws2812_push(uint8_t byte)
     for (count = 0; count < 8; count++) {
         PORTC |= _BV(IO_FLED);
         cpu_wait();
-
         if (!(byte & 0x80))
             PORTC &= ~_BV(IO_FLED);
-
         byte <<= 1;
         cpu_wait();
-
         PORTC &= ~_BV(IO_FLED);
         cpu_wait();
     }

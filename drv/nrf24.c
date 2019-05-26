@@ -27,7 +27,7 @@ void nrf24_init(void)
   DDRC |= _BV(IO_RF_CE) | _BV(IO_RF_CSN);
   /* Feature of the new mainboard. */
 #ifdef HAS_RF_REG3V3
-  DRRC |= _BV(IO_3V3REG);
+  DDRC |= _BV(IO_3V3REG);
 #endif
   /* Enable SPI communication with 250 KHz clock. */
   SPCR = _BV(SPE) | _BV(MSTR) | _BV(SPR0);
@@ -39,10 +39,12 @@ void nrf24_init(void)
   EIMSK |= _BV(INT1);
 }
 
+#ifdef HAS_RF_REG3V3
 static inline void enable_3v3_regulator(void)
 {
   PORTC |= _BV(IO_3V3REG);
 }
+#endif
 
 static inline void set_csn_low(void)
 {
@@ -164,14 +166,14 @@ void nrf24_setup(void)
 {
 #ifdef HAS_RF_REG3V3
     enable_3v3_regulator();
-    _delay_ms(20);
+    _delay_ms(100);
 #endif
     nrf24_register_write(CONFIG, _BV(EN_CRC) | _BV(PWR_UP));
     _delay_ms(10);
 
     nrf24_register_write(FEATURE, 0x00);
     nrf24_register_write(DYNPD, 0x00);
-    nrf24_register_write(SETUP_RETR, 0x50);
+    nrf24_register_write(SETUP_RETR, 0x5F);
 
     spi_write_buffer(W_REGISTER(RX_ADDR_P0), nrf24_base_addr,
             sizeof(nrf24_base_addr));
@@ -221,7 +223,16 @@ int nrf24_payload_read(void *data)
 
 static inline void nrf24_wait_until_interrupt(void)
 {
+    uint8_t wait_for_interrupt = 0;
+
     nrf24_interrupt = 0;
+    do {
+        if (wait_for_interrupt > 100)
+            break;
+
+        _delay_us(100);
+        wait_for_interrupt++;
+    }
     while(!nrf24_interrupt);
 }
 

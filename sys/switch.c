@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 
 #include "../drv/ws2812.h"
@@ -38,6 +39,18 @@ void switch_update_state(uint8_t state)
         break;
     }
     switch_state = state;
+}
+
+void switch_set_color(uint8_t type, struct ws2812_color *color)
+{
+    switch(type) {
+    case SW_COLOR_ON:
+        memcpy(&switch_enable_c, color, sizeof(struct ws2812_color));
+        break;
+    case SW_COLOR_OFF:
+        memcpy(&switch_disable_c, color, sizeof(struct ws2812_color));
+        break;
+    }
 }
 
 uint8_t switch_current_state(void)

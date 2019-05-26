@@ -3,6 +3,7 @@
 #include <util/delay.h>
 
 #include <net.h>
+#include "../drv/acs724.h"
 #include "../drv/nrf24.h"
 #include "../drv/ws2812.h"
 #include "switch.h"
@@ -20,18 +21,13 @@
 
 extern volatile uint8_t sys_status;
 
-static struct ws2812_color net_error_c = { 0x00, 0x20, 0x00 };
-static struct ws2812_color net_error_a = { 0x00, 0x00, 0x20 };
-static struct ws2812_color net_error_b = { 0x20, 0x00, 0x00 };
 static struct ws2812_color net_error_d = { 0x20, 0x20, 0x00 };
 static struct ws2812_color net_error_e = { 0x20, 0x20, 0x20 };
 
 static uint8_t net_state = NSTATE_NOT_CONN;
 static uint8_t net_buffer[32] = {0};
 
-static uint8_t net_delay = 0;
 static uint8_t net_retries = 0;
-
 static uint16_t net_device = 0;
 
 static void net_hello(void)
@@ -51,26 +47,22 @@ static void net_ping(void)
 {
     struct net_ping *message = (struct net_ping *)net_buffer;
 
-    printf("net_ping %02x, %02x \r\n", net_delay, net_retries);
-    if ((net_delay++) <= 3)
-        return;
-
-    if (net_retries > 3) {
-        nrf24_set_address(NULL);
-        net_state = NSTATE_NOT_CONN;
-        net_delay = 0;
-        net_retries = 0;
-        return;
-    }
-
     message->header.type = MSG_PING;
     message->header.device = net_device;
     message->state = switch_current_state();
 
-    nrf24_payload_write(net_buffer);
+    if (switch_current_state())
+        message->measure = acs724_read();
+    else
+        message->measure = 0;
 
-    net_delay = 0;
-    net_retries++;
+    nrf24_payload_write(net_buffer);
+}
+
+static inline void net_reset(void)
+{
+    net_state   = NSTATE_NOT_CONN;
+    net_retries = 0;
 }
 
 static void net_r_acquired(struct net_header *header)
@@ -91,14 +83,27 @@ static void net_r_pong(struct net_header *header)
     ws2812_mode(&net_error_d, WS2812_MODE_FADE);
     printf("pong for device %04x \r\n", header->device);
     net_retries = 0;
-    _delay_us(500);
+    _delay_us(100);
 }
 
 static void net_r_switch(struct net_header *header)
 {
     struct net_switch *message = (struct net_switch *)header;
     switch_update_state(message->state);
-    net_delay = 0xff;
+
+    net_retries = 0;
+    net_ping();
+}
+
+static void net_r_settings(struct net_header *header)
+{
+    struct net_settings *message = (struct net_settings *)header;
+    switch_set_color(SW_COLOR_ON, &message->color_on);
+    switch_set_color(SW_COLOR_OFF, &message->color_off);
+
+    _delay_us(200);
+    net_retries = 0;
+    net_ping();
 }
 
 static int net_receive(void)
@@ -122,6 +127,9 @@ static int net_receive(void)
     case MSG_SWITCH:
         net_r_switch(header);
         break;
+    case MSG_SETTINGS:
+        net_r_settings(header);
+        break;
     }
 
     return 0;
@@ -129,31 +137,29 @@ static int net_receive(void)
 
 void net_task(void)
 {
-    printf("net_taks call\r\n");
+    printf("net_task %02x \r\n", net_retries);
+    _delay_us(200);
 
-    switch (net_state) {
-    case NSTATE_NOT_CONN:
+    if (net_state == NSTATE_NOT_CONN) {
         net_hello();
-        break;
-    case NSTATE_VALID:
-        net_ping();
-        break;
+    }
+    else if (net_state == NSTATE_VALID) {
+        if (net_retries > 10) {
+            nrf24_set_address(NULL);
+            net_reset();
+            return;
+        }
+        else if ((switch_current_state() && (net_retries % 2) == 1) || (net_retries % 4) == 3)
+            net_ping();
+        net_retries++;
     }
 }
 
 void net_handle(void)
 {
     uint8_t status = nrf24_fetch_status();
-
-    if (status & NRF24_RX_DR) {
-        net_receive();
-    }
-    else if (status & NRF24_MAX_RT) {
-        ws2812_mode(&net_error_c, WS2812_MODE_FADE);
-    }
-    else if (status & NRF24_TX_DS) {
-         ws2812_mode(&net_error_b, WS2812_MODE_FADE);
-    }
+    if ((status & NRF24_RX_DR) == 0)
+        return;
+    net_receive();
 }
-
 
